@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .search-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .tracking-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.2em;
+            border: 3px solid #e9ecef;
+            border-radius: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .tracking-input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .track-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .track-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .results {
+            padding: 40px;
+            display: none;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid #4facfe;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            font-size: 1.5em;
+        }
+
+        .delivered { background: #d4edda; color: #155724; }
+        .in-transit { background: #fff3cd; color: #856404; }
+        .pending { background: #f8d7da; color: #721c24; }
+
+        .status-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 25px;
+            padding-left: 30px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #e9ecef;
+        }
+
+        .timeline-item:last-child::before {
+            height: 25px;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -5px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4facfe;
+            z-index: 1;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .timeline-date {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .search-section, .results { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Package Tracker</h1>
+            <p>Enter your tracking number to check status</p>
+        </div>
+
+        <div class="search-section">
+            <div class="input-group">
+                <input type="text" class="tracking-input" id="trackingInput" 
+                       placeholder="Enter tracking number (e.g., ABC123XYZ)" maxlength="20">
+            </div>
+            <button class="track-btn" onclick="trackPackage()">Track Package</button>
+        </div>
+
+        <div class="results" id="results">
+            <div class="status-card" id="statusCard">
+                <div class="status-header">
+                    <div class="status-icon delivered" id="statusIcon">✅</div>
+                    <div>
+                        <div class="status-title" id="statusTitle">Delivered</div>
+                        <div id="trackingNumber"></div>
+                    </div>
+                </div>
+                <div class="timeline" id="timeline"></div>
+            </div>
+        </div>
+
+        <div class="no-results" id="noResults" style="display: none;">
+            <h3>🔍 No results found</h3>
+            <p>Please check your tracking number and try again.</p>
+        </div>
+    </div>
+
+    <script>
+        // Sample tracking data (in real app, this would come from a database/API)
+        const trackingData = {
+            'ABC123XYZ': {
+                status: 'delivered',
+                trackingNumber: 'ABC123XYZ',
+                updates: [
+                    { date: '2024-01-15 14:30', message: 'Delivered to your address' },
+                    { date: '2024-01-15 09:15', message: 'Out for delivery' },
+                    { date: '2024-01-14 16:45', message: 'Arrived at local facility' },
+                    { date: '2024-01-13 10:20', message: 'Package received by carrier' }
+                ]
+            },
+            'DEF456UVW': {
+                status: 'in-transit',
+                trackingNumber: 'DEF456UVW',
+                updates: [
+                    { date: '2024-01-15 11:20', message: 'In transit - heading to next facility' },
+                    { date: '2024-01-14 16:45', message: 'Departed sorting facility' },
+                    { date: '2024-01-14 09:30', message: 'Arrived at sorting facility' }
+                ]
+            },
+            'GHI789RST': {
+                status: 'pending',
+                trackingNumber: 'GHI789RST',
+                updates: [
+                    { date: '2024-01-15 08:00', message: 'Order confirmed, preparing for shipment' }
+                ]
+            }
+        };
+
+        function trackPackage() {
+            const input = document.getElementById('trackingInput');
+            const trackingNumber = input.value.trim().toUpperCase();
+            const results = document.getElementById('results');
+            const noResults = document.getElementById('noResults');
+
+            // Reset UI
+            results.style.display = 'none';
+            noResults.style.display = 'none';
+
+            if (!trackingNumber) {
+                alert('Please enter a tracking number');
+                return;
+            }
+
+            const data = trackingData[trackingNumber];
+            
+            if (data) {
+                displayResults(data);
+            } else {
+                noResults.style.display = 'block';
+            }
+
+            input.value = '';
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusTitle = document.getElementById('statusTitle');
+            const trackingNumberEl = document.getElementById('trackingNumber');
+            const timeline = document.getElementById('timeline');
+
+            // Update status
+            statusIcon.className = `status-icon ${data.status}`;
+            statusTitle.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            trackingNumberEl.textContent = `Tracking: ${data.trackingNumber}`;
+
+            // Update timeline
+            timeline.innerHTML = '';
+            data.updates.forEach((update, index) => {
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                item.innerHTML = `
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-date">${update.date}</div>
+                        <div>${update.message}</div>
+                    </div>
+                `;
+                timeline.appendChild(item);
+            });
+
+            results.style.display = 'block';
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Allow Enter key to track
+        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                trackPackage();
+            }
+        });
+    </script>
+</body>
+</html>
